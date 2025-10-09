@@ -37,12 +37,13 @@ public class MiniFarmManagerV1 implements Serializable {
 
   // --- menus ---
   private static void mainMenu() {
-    String[] choices = {"Inventory", "Save & Exit"};
+    String[] choices = {"Inventory", "Sales", "Save & Exit"};
     while (true) {
       int pick = JOptionPane.showOptionDialog(null,
         "Family Farm (v1)\nChoose an option:",
         "Main Menu", 0, JOptionPane.PLAIN_MESSAGE, null, choices, choices[0]);
       if (pick == 0) inventoryMenu();
+      else if (pick ==1) salesMenu();
       else break;
     }
   }
@@ -55,6 +56,48 @@ public class MiniFarmManagerV1 implements Serializable {
     if (pick == 0) addNewProduct();
     else if (pick == 1) listAllProducts();
   }
+
+  // --- Sales Menu ---
+
+  private static void salesMenu() {
+    String[] options = {"Quick Sale (single item)", "Back"};
+    int pick = JOptionPane.showOptionDialog(null, "Sales Menu", "Sales", 0, JOptionPane.PLAIN_MESSAGE, null, options, options[0]);
+
+      if (pick == 0) quickSale();
+  }
+
+  private static void quickSale() {
+    // ask item
+    String id = JOptionPane.showInputDialog("Item ID to sell:");
+    if (id == null || id.trim().isEmpty()) return;
+
+    Product p = findByItemId(id);
+    if (p == null) {
+      showMsg("Item Not Found.");
+      return;   
+    }
+     // Ask Qnty
+     int qty = 0;
+     try {
+      qty = Integer.parseInt(JOptionPane.showInputDialog("Quantity (stock " + "):"));
+     } catch (Exception e) { /* leave qty=0 */ }
+     if (qty <= 0) { showMsg("Invalid quantity."); return; }
+     //totals
+     double sub = p.price * qty;
+     double tax = p.taxable ? (sub * data.taxRate) : 0.0;
+     tax = Math.round(tax * 100.0) / 100.0;
+     double total = Math.round((sub * tax) * 100.0) / 100.0;
+     // Payment Method
+     String [] pay = {"CASH", "CARD", "OTHER", "Cancel"};
+     String pm = (String) JOptionPane.showInputDialog(null,"Subtotal: $" +  String.format("%.2f", sub) + "\nTax: $" + String.format("%.2f", tax) + "\nTotal: $" + String.format("%.2f", total) + "\n\nPayment method:", "Checkout", JOptionPane.PLAIN_MESSAGE, null, pay, pay[0]);
+     if (pm == null || "cancel".equals(pm)) return;
+     // COMMIT: REDUCE STOCK AND SAVE
+     p.stock = p.stock = qty;
+     showMsg("Sale complete. \n" + qty + " x " + p.name + "\nPaid: " + pm + "\nTotal: $" + String.format("%.2f", total));
+     saveData();
+    }
+       
+  
 
   // --- add & list ---
   private static void addNewProduct() {
@@ -109,6 +152,15 @@ public class MiniFarmManagerV1 implements Serializable {
   // --- helpers ---
   private static void showMsg(String msg) {
     JOptionPane.showMessageDialog(null, msg);
+  }
+
+  private static Product findByItemId(String id) {
+    if (id == null) return null;
+    String key = id.trim();
+    for (Product p : data.products) {
+      if (p.itemId != null && p.itemId.equalsIgnoreCase(key)) return p;
+    }
+    return null;
   }
 
   private static void loadData() {
